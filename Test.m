@@ -33,13 +33,14 @@ for i=1:3
     num=r*c;
     sample_rgb(i,1)=sum(sum(sample(:,:,i)))/num;
 end
+
 % sample = imresize(sample,scale);
 fid1 = fopen('A111.txt','wt');
 fid2 = fopen('A121.txt','wt');
 % PATH1 = 'E:\0ClassWork\信号与系统\大作业\1\';
 % PATH2 = 'E:\0ClassWork\信号与系统\大作业\2\';
 
-
+% Processing Sort
 waithand2=waitbar(0,'Processing Sort');
 for i = 1:Length
     str=['Processing Sort  ',num2str(i),'/',num2str(Length)];
@@ -81,9 +82,7 @@ fclose(fid2);
  leftFlag=true;
  rightFlag=true;
  
- %start
-
- 
+% start restoring two speaker
  waithand5=waitbar(0,'Restoring Speakers');
  coef=zeros(1,A1_cnt);
  startpoint=1;
