@@ -3,7 +3,7 @@
 %输入的图片尺寸为640*480较为合适
 %Preparation
 curentPath  = pwd;
-fileFolder=fullfile(pwd,'\Inorder2');
+fileFolder=fullfile(pwd,'\unsorted_images');
 dirOutput=dir(fullfile(fileFolder,'*.jpg'));
 filenames={dirOutput.name}';
 Length = length(filenames);
@@ -87,99 +87,160 @@ fclose(fid2);
     str=['Preparing Data   ',num2str(i),'/',num2str(A1_cnt)];
     waitbar(i/A1_cnt, waithand3, str);
     tmp = im2double(rgb2gray(src{A1_list{i}}));
-    speakers(:,i)=[reshape(tmp,size(tmp,1)*size(tmp,2),1)];
+    speakers(:,i)=reshape(tmp,size(tmp,1)*size(tmp,2),1);
  end
  close(waithand3);
  
  % Get the relationship
  coef = corrcoef(speakers);
+ for i=1:size(coef)
+     coef(i,i)=0;
+ end
  
 % Start restoring two speaker
  waithand4=waitbar(0,'Restoring Speakers');
  startpoint=1;
  % Processing Right
- while(rightFlag)
+ test_list=A1_list;
+ while(rightFlag && size(test_list,2)~=0)
      testpoint=startpoint;
      queue_end=queue_end+1;
      queue_right{queue_end}=A1_list{startpoint};
      test_list=A1_list;
      testcoef=coef;
-     while(rightFlag)
-         if(queue_end>11)
+     startcoef=testcoef(:,startpoint);
+     while(rightFlag && size(test_list,2)~=0)
+         if(queue_end>19)
              str=['Restoring Speakers  ',num2str(A1_cnt-length(test_list)),'/',num2str(A1_cnt)];
              waitbar((A1_cnt-length(test_list))/A1_cnt, waithand4, str);
          end
-         test_list(testpoint)=[];
          [B, I] = sort(testcoef(:,testpoint),'descend');
-         if((1-B(1))<=0.01)
-             testpoint=I(1);
-             testcoef(testpoint,:)=0;
+         if((1-B(1))<=0.007)
              queue_end=queue_end+1;
              queue_right{queue_end}=test_list{I(1)};
+             test_list(testpoint)=[];
+             testcoef(testpoint,:)=[];
+             testcoef(:,testpoint)=[];
+             startcoef(testpoint,:)=[];
+             testpoint=find(cell2mat(test_list)==queue_right{queue_end});
          else
-            if(queue_end<12)  
+            if(queue_end<19)  
                 queue_end=0;
                 queue_right(:)=[];
                 startpoint=startpoint+1;
                 break;
             else
+                test_list(testpoint)=[];
+                testcoef(testpoint,:)=[];
+                testcoef(:,testpoint)=[];
+                startcoef(testpoint,:)=[];
                 rightFlag=false;
             end
          end
      end
  end
-  % Processing Left 
-  for i=1:length(test_list)
-      coef(1,i)=Feature(start_vector,src{test_list{i}});
-  end
-       [B, I] = sort(coef,'descend');
-       if((1-B(1))<=0.01)
-           testpoint=I(1);
-           test_vector=src{test_list{testpoint}};
-           queue_start=queue_start+1;
-           queue_left{queue_start}=test_list{I(1)};
-       else
-           leftFlag=false;
-       end
-  
- while(size(test_list,2)~=1 && leftFlag)
+ % Before Processing Left 
+ if(size(test_list,2)~=0)
+    [B, I] = sort(startcoef,'descend');
+    if((1-B(1))<=0.007)
+        queue_start=queue_start+1;
+        queue_left{queue_start}=test_list{I(1)};
+        testpoint=find(cell2mat(test_list)==queue_left{queue_start});
+    else
+        leftFlag=false;
+    end
+ else
+    leftFlag =false; 
+ end
+ % Processing Left
+ while(size(test_list,2)~=0 && leftFlag)
        str=['Restoring Speakers  ',num2str(A1_cnt-length(test_list)),'/',num2str(A1_cnt)];
        waitbar((A1_cnt-length(test_list))/A1_cnt, waithand4, str);
-       coef=zeros(1,A1_cnt);
-       test_list(testpoint)=[];
-       for i=1:length(test_list)
-          coef(1,i)=Feature(test_vector,src{test_list{i}});
-       end
-       [B, I] = sort(coef,'descend');
-       if((1-B(1))<=0.01)
-          testpoint=I(1);
-          test_vector=src{test_list{testpoint}};
-          queue_start=queue_start+1;
-          queue_left{queue_start}=test_list{I(1)};
+       
+       [B, I] = sort(testcoef(:,testpoint),'descend');
+       if((1-B(1))<=0.007)
+           queue_start=queue_start+1;
+           queue_left{queue_start}=test_list{I(1)};
+           test_list(testpoint)=[];
+           testcoef(testpoint,:)=[];
+           testcoef(:,testpoint)=[];
+           testpoint=find(cell2mat(test_list)==queue_left{queue_start});
        else
            leftFlag=false;
+           test_list(testpoint)=[];
+           testcoef(testpoint,:)=[];
+           testcoef(:,testpoint)=[];
        end
  end
  
- while(size(test_list,2)~=0)
+ % Process remained left
+ remain_right = true;
+ l=1;
+ while(size(test_list,2)~=0 && remain_right)
       str=['Restoring Speakers  ',num2str(A1_cnt-length(test_list)),'/',num2str(A1_cnt)];
       waitbar((A1_cnt-length(test_list))/A1_cnt, waithand4, str);
-      coef=zeros(1,A1_cnt);
-      test_vector=src{test_list{1}};
-      for i=1:length(queue_right)
-        coef(1,i)=Feature(test_vector,src{queue_right{i}});
-      end
+      
       max=0;
       for i=1:length(queue_right)-1
-          temp=coef(1,i)+coef(1,i+1)-Feature(src{queue_right{i+1}},src{queue_right{i}});
+          tmp0 = im2double(rgb2gray(src{test_list{l}}));
+          tmp1 = im2double(rgb2gray(src{queue_right{i}}));
+          tmp2 = im2double(rgb2gray(src{queue_right{i+1}}));
+          tmp0=reshape(tmp0,size(tmp0,1)*size(tmp0,2),1);
+          tmp1=reshape(tmp1,size(tmp1,1)*size(tmp1,2),1);
+          tmp2=reshape(tmp2,size(tmp2,1)*size(tmp2,2),1);
+          tmpcoef1=corrcoef([tmp1 tmp0]);
+          tmpcoef2=corrcoef([tmp2 tmp0]);
+          tmpcoef3=corrcoef([tmp1 tmp2]);
+          temp=tmpcoef1(2,1)+tmpcoef2(2,1)-tmpcoef3(2,1);
           if(max<temp)
               max=temp;
               pos=i;
           end
       end
-      queue_right=[queue_right(1:pos) test_list{1} queue_right(pos+1:queue_end)];
-      queue_end=queue_end+1;
-      test_list(1)=[];
+      tmp1 = im2double(rgb2gray(src{queue_right{pos}}));
+      tmp2 = im2double(rgb2gray(src{queue_right{pos+1}}));
+      tmp1=reshape(tmp1,size(tmp1,1)*size(tmp1,2),1);
+      tmp2=reshape(tmp2,size(tmp2,1)*size(tmp2,2),1);
+      tmpcoef1=corrcoef([tmp1 tmp0]);
+      tmpcoef2=corrcoef([tmp2 tmp0]);
+      if(tmpcoef1(2,1)<0.99||tmpcoef2(2,1)<0.99)
+          l=l+1;
+          if(l>size(test_list,2))
+              remain_right=false;
+          end
+      else
+          queue_right=[queue_right(1:pos) test_list{l} queue_right(pos+1:queue_end)];
+          queue_end=queue_end+1;
+          test_list(l)=[];
+      end
+ end
+ 
+ % Process remain left
+ while(size(test_list,2)~=0)
+      str=['Restoring Speakers  ',num2str(A1_cnt-length(test_list)),'/',num2str(A1_cnt)];
+      waitbar((A1_cnt-length(test_list))/A1_cnt, waithand4, str);
+      
+      max=0;
+      for i=1:length(queue_left)-1
+          tmp0 = im2double(rgb2gray(src{test_list{1}}));
+          tmp1 = im2double(rgb2gray(src{queue_left{i}}));
+          tmp2 = im2double(rgb2gray(src{queue_left{i+1}}));
+          tmp0=reshape(tmp0,size(tmp0,1)*size(tmp0,2),1);
+          tmp1=reshape(tmp1,size(tmp1,1)*size(tmp1,2),1);
+          tmp2=reshape(tmp2,size(tmp2,1)*size(tmp2,2),1);
+          tmpcoef1=corrcoef([tmp1 tmp0]);
+          tmpcoef2=corrcoef([tmp2 tmp0]);
+          tmpcoef3=corrcoef([tmp1 tmp2]);
+          temp=tmpcoef1(2,1)+tmpcoef2(2,1)-tmpcoef3(2,1);
+          if(max<temp)
+              max=temp;
+              pos=i;
+          end
+      end
+      
+       queue_left=[queue_left(1:pos) test_list{1} queue_left(pos+1:queue_start)];
+       queue_start=queue_start+1;
+       test_list(1)=[];
  end
   close(waithand4);
   
@@ -198,9 +259,3 @@ fclose(fid2);
 % The earth is at the area of 55~119,397~437
 
 % Data Preparetion
-coef = zeros(A2_cnt, A2_cnt);
-for i=1:A2_cnt
-   for j=1:(i-1)
-       coef(i,j)=Feature(src{i},src{j});
-   end
-end
