@@ -35,8 +35,8 @@ for i=1:3
 end
 
 % sample = imresize(sample,scale);
-fid1 = fopen('A111.txt','wt');
-fid2 = fopen('A121.txt','wt');
+fid1 = fopen('A11.txt','wt');
+fid2 = fopen('A12.txt','wt');
 % PATH1 = 'E:\0ClassWork\信号与系统\大作业\1\';
 % PATH2 = 'E:\0ClassWork\信号与系统\大作业\2\';
 
@@ -249,7 +249,7 @@ fclose(fid2);
  else
     queue = queue_right;
  end
- fid1 = fopen('A21.txt','wt'); 
+ fid1 = fopen('A2.txt','wt'); 
  for i=1:length(queue)
     [pathstr, name, ext] = fileparts(filenames{queue{i}});
      fprintf(fid1,'%s\n',name);
@@ -259,3 +259,45 @@ fclose(fid2);
 % The earth is at the area of 55~119,397~437
 
 % Data Preparetion
+waithand5=waitbar(0,'Data Preparetion');
+for i=1:A2_cnt
+    str=['Data Preparetion  ',num2str(i),'/',num2str(A2_cnt)];
+    waitbar(i/A2_cnt, waithand5, str);
+    tmp=imresize(src{A2_list{i}},0.4);
+    scenes(:,i)=reshape(im2double(rgb2gray(tmp)),1,size(tmp,1)*size(tmp,2));
+end
+close(waithand5);
+[pcacoeff,score,latent]=pca(scenes');
+
+for i=1:size(latent)
+    if(latent(i,1)>0.02)
+        cluster(:,i)=score(:,i);
+        clusterlatent(i,1)=latent(i,1);
+    end
+end
+
+[IDX, C] = kmeans(cluster,35);
+PATH = 'E:\0ClassWork\信号与系统\大作业\ext\';
+ 
+waithand6=waitbar(0,'Cluster Data Orginazing');
+cluster_length=zero(1,35);
+for i=1:A2_cnt
+%       OBJECT=fullfile(fileFolder,filenames{A2_list{i}});
+%       str=[PATH,num2str(IDX(i,1)),'\']
+%       copyfile(OBJECT,str);
+    str=['Cluster Data Orginazing  ',num2str(i),'/',num2str(A2_cnt)];
+    waitbar(i/A2_cnt, waithand6, str);
+    cluster_length(1,IDX(i,1))=cluster_length(1,IDX(i,1))+1;
+    kmeans_sorted(cluster_length(1,IDX(i,1)),IDX(i,1))=A2_list{i};
+    kmeans_sorted_image{IDX(i,1)}(:,cluster_length(1,IDX(i,1)))=scenes(:,i);
+end
+close(waithand6);
+
+
+for i=1:35
+    tested_list(:,:)=[];tested_image(:,:)=[];
+    tested_list(:,1)=kmeans_sorted(1:cluster_length(1,IDX(i,1)),i);
+    tested_image=kmeans_sorted_image{i};
+    
+    
+end
