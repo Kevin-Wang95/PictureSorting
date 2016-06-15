@@ -1,3 +1,4 @@
+clear all;
 %% sort
 %需将工作路径设置为当前project的路径
 %输入的图片尺寸为640*480较为合适
@@ -280,7 +281,7 @@ end
 PATH = 'E:\0ClassWork\信号与系统\大作业\ext\';
  
 waithand6=waitbar(0,'Cluster Data Orginazing');
-cluster_length=zero(1,35);
+cluster_length=zeros(1,35);
 for i=1:A2_cnt
 %       OBJECT=fullfile(fileFolder,filenames{A2_list{i}});
 %       str=[PATH,num2str(IDX(i,1)),'\']
@@ -293,11 +294,12 @@ for i=1:A2_cnt
 end
 close(waithand6);
 
-
 for i=1:35
-    tested_list(:,:)=[];tested_image(:,:)=[];
-    tested_list(:,1)=kmeans_sorted(1:cluster_length(1,IDX(i,1)),i);
+    tested_list=zeros(cluster_length(1,i),1);
+    tested_list(:,1)=kmeans_sorted(1:cluster_length(1,i),i);
     tested_image=kmeans_sorted_image{i};
-    
-    
+    tested_image_coeff = corrcoef(tested_image);
+    for j=1:length(tested_list)
+        
+    end
 end
