@@ -278,28 +278,94 @@ for i=1:size(latent)
 end
 
 [IDX, C] = kmeans(cluster,35);
-PATH = 'E:\0ClassWork\信号与系统\大作业\ext\';
- 
+PATH1 = 'E:\0ClassWork\信号与系统\大作业\ext\';
+
+PATH2 = 'E:\0ClassWork\信号与系统\大作业\ext.bak1\';
+% First Time cluster data preparation
 waithand6=waitbar(0,'Cluster Data Orginazing');
 cluster_length=zeros(1,35);
 for i=1:A2_cnt
-%       OBJECT=fullfile(fileFolder,filenames{A2_list{i}});
-%       str=[PATH,num2str(IDX(i,1)),'\']
-%       copyfile(OBJECT,str);
     str=['Cluster Data Orginazing  ',num2str(i),'/',num2str(A2_cnt)];
     waitbar(i/A2_cnt, waithand6, str);
     cluster_length(1,IDX(i,1))=cluster_length(1,IDX(i,1))+1;
+    OBJECT=fullfile(fileFolder,filenames{A2_list{i}});
+    str1=[PATH1,num2str(IDX(i,1)),'\'];
+    copyfile(OBJECT,str1);
     kmeans_sorted(cluster_length(1,IDX(i,1)),IDX(i,1))=A2_list{i};
     kmeans_sorted_image{IDX(i,1)}(:,cluster_length(1,IDX(i,1)))=scenes(:,i);
 end
 close(waithand6);
 
-for i=1:35
+% Second Time data preparation
+cluster_num=35;
+i=1;
+while(i<=cluster_num)
     tested_list=zeros(cluster_length(1,i),1);
     tested_list(:,1)=kmeans_sorted(1:cluster_length(1,i),i);
     tested_image=kmeans_sorted_image{i};
     tested_image_coeff = corrcoef(tested_image);
-    for j=1:length(tested_list)
-        
+    for ii=1:size(tested_image_coeff)
+        tested_image_coeff(ii,ii)=-inf;
+    end
+    testcoef=tested_image_coeff;
+    clear test_list;
+    test_list=tested_list;
+    flag=true;
+    prevalue=1;
+    prediff=0.25;
+    while(flag&&(size(test_list,1)~=0))
+        [B, I] = sort(testcoef(:,1),'descend');
+        if(prevalue-B(1)<30*prediff)
+            prediff=prevalue-B(1);
+            prevalue=B(1);
+            testcoef(I(1),:)=[];
+            B(1,:)=[];
+            test_list(I(1),:)=[];
+            I(1,:)=[];
+        else
+            test_list(I(size(I,1)),:)=[];
+            flag=false;
+            cluster_num=cluster_num+1;
+            cluster_length(1,cluster_num)=size(test_list,1);
+            cluster_length(1,i)=cluster_length(1,i)-size(test_list,1);
+            kmeans_sorted(:,cluster_num)=zeros(size(kmeans_sorted,1),1);
+            kmeans_sorted(1:size(test_list,1),cluster_num)=test_list;
+            kmeans_sorted_image{cluster_num}(:,:)=zeros(size(tested_image,1),cluster_length(1,cluster_num));
+            for j=1:size(test_list,1)
+                pos=find(tested_list==test_list(j,1));
+                tested_list(pos,:)=[];
+                kmeans_sorted_image{cluster_num}(:,j)=tested_image(:,pos);
+                tested_image(:,pos)=[];
+            end
+            kmeans_sorted(1:cluster_length(1,i),i)=tested_list;
+            kmeans_sorted(cluster_length(1,i)+1:size(kmeans_sorted,1),i)=zeros(size(kmeans_sorted,1)-cluster_length(1,i),1);
+            kmeans_sorted_image{i}(:,:)=[];
+            kmeans_sorted_image{i}=tested_image;
+
+        end
+%              nextpoint_name=test_list(I(1),1);
+%              test_list(testpoint,:)=[];
+%              testcoef(:,testpoint)=[];
+%              testpoint=find(test_list==nextpoint_name);
+%          else
+%              flag=false;
+%              if(I(size(I,1))==testpoint)
+%                  test_list(testpoint,:)=[];
+%              else
+%                  tempname=test_list(I(size(I,1)),1);
+%                  test_list(testpoint,:)=[];
+%                  test_list(find(test_list==tempname),:)=[];
+%              end
+
+
+%          end
+    end
+    i=i+1;
+end
+for iii=1:cluster_num
+    for j=1:cluster_length(1,iii)
+      OBJECT=fullfile(fileFolder,filenames{kmeans_sorted(j,iii)});
+      str2=[PATH2,num2str(iii),'\'];
+      copyfile(OBJECT,str2);
     end
 end
